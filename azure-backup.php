@@ -34,9 +34,13 @@ function createContainerIfNotExists($blobRestProxy, $containername)
     }
 }
 
+// read configuration ( local for test else /etc/azurebackup.conf
+$config = parse_ini_file('./azurebackup.conf');
+print_r($config);
+
 // Create blob REST proxy.
 //$connectionString = "UseDevelopmentStorage=true";
-$connectionString = "DefaultEndpointsProtocol=https;AccountName=portalvhdsg96xsr5ygpk0g;AccountKey=RG08OFwL+adfwiZr9kdXbpRVy2PClO06UuTMYVfSQs9keNszVviNRbAt1QE+82LuyxMGpKOwNarLnNGkw2bm8Q==";
+$connectionString = "DefaultEndpointsProtocol=" . $config['endpoint']. ";AccountName=" . $config['accountname'] . ";AccountKey=" . $config['accountkey'];
 $blobRestProxy = ServicesBuilder::getInstance()->createBlobService($connectionString);
 
 

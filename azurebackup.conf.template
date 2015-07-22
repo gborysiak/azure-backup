@@ -1,0 +1,10 @@
+; configuration file for ini
+
+; endpoint configuration for Azure storage ( http/https )
+endpoint=https
+
+; account name
+accountname=abcd
+
+; account key
+accountkey="abcd=="
