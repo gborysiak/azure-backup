@@ -1,5 +1,6 @@
 <?php
-require_once 'WindowsAzure/WindowsAzure.php';
+set_include_path('/usr/local/share/WindowsAzure');
+require_once 'WindowsAzure.php';
 
 use WindowsAzure\Common\ServicesBuilder;
 use WindowsAzure\Blob\Models\PublicAccessType;
