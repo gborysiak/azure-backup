@@ -1,5 +1,5 @@
 <?php
-set_include_path('/usr/local/share/WindowsAzure');
+set_include_path(get_include_path() . PATH_SEPARATOR .'/usr/local/share/WindowsAzure');
 require_once 'WindowsAzure.php';
 
 use WindowsAzure\Common\ServicesBuilder;
@@ -69,7 +69,7 @@ function sendFile($blobRestProxy, $containerName, $filename) {
 
 
 // check argument line
-print_r($argv);
+//print_r($argv);
 if( count($argv) < 2 ) {
   echo "Usage:\n";
   echo "# php azure_backup.php <file>\n";
@@ -96,7 +96,7 @@ if( file_exists('/etc/azurebackup.conf')) {
 } else {
    exit('No configuration file found.\n');
 }
-print_r($config);
+//print_r($config);
 
 // Create blob REST proxy.
 //$connectionString = "UseDevelopmentStorage=true";
