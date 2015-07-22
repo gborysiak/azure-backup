@@ -8,6 +8,9 @@ use WindowsAzure\Blob\Models\Block;
 use WindowsAzure\Blob\Models\CreateContainerOptions;
 use WindowsAzure\Blob\Models\ListContainersOptions;
 
+define("BLOCKSIZE", 4 * 1024 * 1024);    
+define("PADLENGTH", 5); 
+
 function createContainerIfNotExists($blobRestProxy, $containername)
 {
     // See if the container already exists.
@@ -34,8 +37,64 @@ function createContainerIfNotExists($blobRestProxy, $containername)
     }
 }
 
+function sendFile($blobRestProxy, $containerName, $filename) {
+    $handle = fopen($filename, "r");
+    // Upload the blob using blocks.
+    $counter = 1;
+    $blockIds = array();
+    // file name extracted from path
+    $blobname = basename($filename);
+    while (!feof($handle))
+    {
+        $blockId = str_pad($counter, PADLENGTH, "0", STR_PAD_LEFT);
+        echo "Processing block $blockId.\n";
+        
+        $block = new Block();
+        $block->setBlockId(base64_encode($blockId));
+        $block->setType("Uncommitted");
+        array_push($blockIds, $block);
+        
+        $data = fread($handle, BLOCKSIZE);
+        
+        // Upload the block.
+        $blobRestProxy->createBlobBlock($containerName, $blobname, base64_encode($blockId), $data);
+        $counter++;
+    }
+    // Done creating the blocks. Close the file and commit the blocks.
+    fclose($handle);
+    echo "Commiting the blocks.\n";    
+    $blobRestProxy->commitBlobBlocks($containerName, $blobname, $blockIds);
+}
+
+
+// check argument line
+print_r($argv);
+if( count($argv) < 2 ) {
+  echo "Usage:\n";
+  echo "# php azure_backup.php <file>\n";
+  exit("No file selected.\n");
+}
+
+// check if $argv[1] exists
+$filename=$argv[1];
+
+// check ig argv[1] is a folder
+$folder=false;
+if( is_dir($filename) ) {
+  $folder=true;
+} else if( ! file_exists($filename)) {
+  exit($filename . " does not exists.\n");
+}	
+
 // read configuration ( local for test else /etc/azurebackup.conf
-$config = parse_ini_file('./azurebackup.conf');
+$config = null;
+if( file_exists('/etc/azurebackup.conf')) {
+   $config = parse_ini_file('/etc/azurebackup.conf');
+} else if( file_exists('./azurebackup.conf')) {	
+   $config = parse_ini_file('./azurebackup.conf');
+} else {
+   exit('No configuration file found.\n');
+}
 print_r($config);
 
 // Create blob REST proxy.
@@ -71,7 +130,17 @@ $createContainerOptions->addMetaData("key2", "value2");
 try {
     // Create container.
     //$blobRestProxy->createContainer("backups", $createContainerOptions);
-    createContainerIfNotExists($blobRestProxy, "backups");
+    $containerName="backups";
+    createContainerIfNotExists($blobRestProxy, $containerName);
+
+    if( ! $folder ) {
+      sendfile($blobRestProxy, $containerName, $filename);
+    } else {
+      foreach(glob($filename.'/*.*') as $file) {
+        echo $file . "\n";
+        sendfile($blobRestProxy, $containerName, $file);
+      } 
+    }
 }
 catch(ServiceException $e){
     // Handle exception based on error codes and messages.
