@@ -67,6 +67,41 @@ function sendFile($blobRestProxy, $containerName, $filename) {
     $blobRestProxy->commitBlobBlocks($containerName, $blobname, $blockIds);
 }
 
+function cleanUpOldFiles($blobRestProxy, $containerName, $nb_days) {
+	try {
+		// List blobs.
+		$blob_list = $blobRestProxy->listBlobs($containerName);
+		$blobs = $blob_list->getBlobs();
+
+		foreach($blobs as $blob)
+		{
+			$name = $blob->getName();
+			//echo $name . "\n";
+			$arr = explode(".", $name);
+			try {
+				$d1 = new DateTime($arr[1]);
+				//print_r($d1);
+				$now = new DateTime();
+				//print_r($now);
+				$res = $now->diff($d1);
+				if( $res->days > $nb_days) {
+					echo $name . " a supprimer " . $res->days . "\n";
+					$blobRestProxy->deleteBlob($containerName, $name);
+				}
+			}
+			catch(Exception $e) {
+			}
+		}
+	}
+	catch(ServiceException $e){
+		// Handle exception based on error codes and messages.
+		// Error codes and messages are here:
+		// http://msdn.microsoft.com/library/azure/dd179439.aspx
+		$code = $e->getCode();
+		$error_message = $e->getMessage();
+		echo $code.": ".$error_message."<br />";
+	}	
+}
 
 // check argument line
 //print_r($argv);
@@ -133,7 +168,7 @@ try {
     //$blobRestProxy->createContainer("backups", $createContainerOptions);
     $containerName="backups";
     createContainerIfNotExists($blobRestProxy, $containerName);
-
+	
     if( ! $folder ) {
       sendfile($blobRestProxy, $containerName, $filename);
     } else {
@@ -142,6 +177,13 @@ try {
         sendfile($blobRestProxy, $containerName, $file);
       } 
     }
+		
+	// delete expired backups
+	$retention=60;
+    if( array_key_exists("retention", $config ) == true ) {
+        $retention=intval($config['retention']);
+    }
+	cleanUpOldFiles($blobRestProxy, $containerName, $retention);
 }
 catch(ServiceException $e){
     // Handle exception based on error codes and messages.

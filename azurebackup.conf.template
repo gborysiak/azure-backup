@@ -8,3 +8,6 @@ accountname=abcd
 
 ; account key
 accountkey="abcd=="
+
+; retention period
+retention=30
